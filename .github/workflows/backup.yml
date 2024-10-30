@@ -1,0 +1,35 @@
+name: Automatic Backup
+
+on:
+  # Runs every day at 12:00 AM UTC
+  schedule:
+    - cron: '0 0 * * *'
+  
+  # Also backup on every push to main
+  push:
+    branches:
+      - main
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Create backup
+        run: |
+          timestamp=$(date +%Y%m%d_%H%M%S)
+          git archive --format=zip -o backup_$timestamp.zip HEAD
+          
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: repository-backup
+          path: backup_*.zip
+          retention-days: 30  # Keep backups for 30 days 
