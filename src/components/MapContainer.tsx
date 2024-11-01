@@ -3,52 +3,56 @@ import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// Debug: Log when component loads
-console.log('MapContainer component loading');
-
-// Debug: Check if mapboxgl is available
-console.log('mapboxgl:', mapboxgl);
-
-const mapboxToken = 'pk.eyJ1IjoibWhwYWR2aXNvcnMiLCJhIjoiY20ydzQ2a24zMDJxeDJqcHpqZ3AzNG94dCJ9.is-MFJM98XTwjTkGyOvAIg';
-
 const MapContainer = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [lng] = useState(-98.5795);
   const [lat] = useState(39.8283);
   const [zoom] = useState(4);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      mapboxgl.accessToken = mapboxToken;
+    if (!mapContainer.current) return;
 
-      if (!mapContainer.current) return;
+    const initializeMap = async () => {
+      try {
+        mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
-      const mapInstance = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [lng, lat],
-        zoom: zoom,
-        antialias: true
-      });
+        const mapInstance = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: 'mapbox://styles/mapbox/streets-v12',
+          center: [lng, lat],
+          zoom: zoom,
+          antialias: true
+        });
 
-      map.current = mapInstance;
+        map.current = mapInstance;
 
-      return () => {
-        map.current?.remove();
-      };
-    } catch (error) {
-      console.error('Map initialization error:', error);
-    }
+        mapInstance.on('load', () => {
+          setIsLoading(false);
+        });
+
+      } catch (error) {
+        console.error('Map initialization error:', error);
+        setIsLoading(false);
+      }
+    };
+
+    initializeMap();
+
+    return () => {
+      map.current?.remove();
+    };
   }, [lat, lng, zoom]);
 
   return (
     <div className="relative w-full h-[600px] rounded-lg overflow-hidden border border-gray-200">
-      <div 
-        ref={mapContainer} 
-        className="absolute inset-0" 
-        style={{ width: '100%', height: '100%' }}
-      />
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
+          <span>Loading map...</span>
+        </div>
+      )}
+      <div ref={mapContainer} className="absolute inset-0" />
     </div>
   );
 };
